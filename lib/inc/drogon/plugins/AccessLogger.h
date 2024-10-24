@@ -128,6 +128,10 @@ class DROGON_EXPORT AccessLogger : public drogon::Plugin<AccessLogger>
     void createLogFunctions(std::string format);
     LogFunction newLogFunction(const std::string &placeholder);
     std::map<std::string, LogFunction> logFunctionMap_;
+    //$request_id
+    static void outputReqId(trantor::LogStream &,
+                              const drogon::HttpRequestPtr &,
+                              const drogon::HttpResponsePtr &);
     //$request_path
     static void outputReqPath(trantor::LogStream &,
                               const drogon::HttpRequestPtr &,

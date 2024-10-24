@@ -70,7 +70,8 @@ void AccessLogger::initAndStart(const Json::Value &config)
     useCustomTimeFormat_ = !timeFormat_.empty();
     useRealIp_ = config.get("use_real_ip", false).asBool();
 
-    logFunctionMap_ = {{"$request_path", outputReqPath},
+    logFunctionMap_ = {{"$request_id", outputReqId},
+                       {"$request_path", outputReqPath},
                        {"$path", outputReqPath},
                        {"$date",
                         [this](trantor::LogStream &stream,
@@ -108,7 +109,7 @@ void AccessLogger::initAndStart(const Json::Value &config)
     if (format.empty())
     {
         format =
-            "$request_date $method $url [$body_bytes_received] ($remote_addr - "
+            "$request_id $request_date $method $url [$body_bytes_received] ($remote_addr - "
             "$local_addr) $status $body_bytes_sent $processing_time";
     }
     createLogFunctions(format);
@@ -350,6 +351,13 @@ AccessLogger::LogFunction AccessLogger::newLogFunction(
                          const drogon::HttpResponsePtr &) {
         stream << placeholder;
     };
+}
+
+void AccessLogger::outputReqId(trantor::LogStream &stream,
+                                 const drogon::HttpRequestPtr &req,
+                                 const drogon::HttpResponsePtr &)
+{
+    stream << req->getAttributes()->get<std::string>("request-id");
 }
 
 void AccessLogger::outputReqPath(trantor::LogStream &stream,
