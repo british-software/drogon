@@ -16,6 +16,7 @@
 
 #include "HttpUtils.h"
 #include "CacheFile.h"
+#include "impl_forwards.h"
 #include <drogon/utils/Utilities.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/RequestStream.h>
@@ -26,9 +27,12 @@
 #include <trantor/utils/Logger.h>
 #include <trantor/utils/MsgBuffer.h>
 #include <trantor/utils/NonCopyable.h>
+#include <trantor/net/TcpConnection.h>
 #include <algorithm>
+#include <functional>
+#include <memory>
 #include <string>
-#include <thread>
+#include <future>
 #include <unordered_map>
 #include <assert.h>
 #include <stdio.h>
@@ -97,6 +101,7 @@ class HttpRequestImpl : public HttpRequest
         streamFinishCb_ = nullptr;
         streamExceptionPtr_ = nullptr;
         startProcessing_ = false;
+        connPtr_.reset();
     }
 
     trantor::EventLoop *getLoop()
@@ -324,6 +329,11 @@ class HttpRequestImpl : public HttpRequest
     void setPeerCertificate(const trantor::CertificatePtr &cert)
     {
         peerCertificate_ = cert;
+    }
+
+    void setConnectionPtr(const std::shared_ptr<trantor::TcpConnection> &ptr)
+    {
+        connPtr_ = ptr;
     }
 
     void addHeader(const char *start, const char *colon, const char *end);
@@ -554,6 +564,21 @@ class HttpRequestImpl : public HttpRequest
         return keepAlive_;
     }
 
+    bool connected() const noexcept override
+    {
+        if (auto conn = connPtr_.lock())
+        {
+            return conn->connected();
+        }
+        return false;
+    }
+
+    const std::weak_ptr<trantor::TcpConnection> &getConnectionPtr()
+        const noexcept override
+    {
+        return connPtr_;
+    }
+
     bool isOnSecureConnection() const noexcept override
     {
         return isOnSecureConnection_;
@@ -705,6 +730,7 @@ class HttpRequestImpl : public HttpRequest
     RequestStreamReaderPtr streamReaderPtr_;
     std::exception_ptr streamExceptionPtr_;
     bool startProcessing_{false};
+    std::weak_ptr<trantor::TcpConnection> connPtr_;
 
   protected:
     std::string content_;
